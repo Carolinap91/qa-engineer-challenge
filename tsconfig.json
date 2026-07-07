@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2021"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@pages/*": ["src/pages/*"],
+      "@api/*": ["src/api/*"],
+      "@utils/*": ["src/utils/*"],
+      "@fixtures/*": ["src/fixtures/*"],
+      "@support/*": ["src/support/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "step-definitions/**/*.ts", "playwright.config.ts", ".features-gen/**/*.ts"],
+  "exclude": ["node_modules", "dist", "playwright-report", "test-results"]
+}

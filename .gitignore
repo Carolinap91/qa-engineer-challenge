@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.features-gen/
+playwright-report/
+cucumber-report/
+test-results/
+.env
+*.log
+.DS_Store

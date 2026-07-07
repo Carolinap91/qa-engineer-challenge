@@ -1,0 +1,40 @@
+name: QA Automation CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [chromium, firefox, api]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.project != 'api' && matrix.project || 'chromium' }}
+
+      - name: Run tests
+        run: npx playwright test --project=${{ matrix.project }}
+        env:
+          BASE_URL_IMDB: https://www.imdb.com
+          BASE_URL_POKEAPI: https://pokeapi.co/api/v2
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report/
+          retention-days: 14

@@ -11,7 +11,11 @@ export class BasePage {
     await this.page.goto(path);
   }
 
+   /**
+   * Abre el menú hamburguesa (drawer) de IMDb. Selector basado en el
+   * aria-label del botón, estable y semántico (no depende de clases CSS).
+   */
   async openMainMenu(): Promise<void> {
-    // TODO: implementar apertura del menú hamburguesa de IMDb
+    await this.page.getByLabel('Open navigation drawer').click();
   }
 }

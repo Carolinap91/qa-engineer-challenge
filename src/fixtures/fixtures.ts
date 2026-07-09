@@ -1,11 +1,10 @@
-import { test as base } from 'playwright-bdd';
+import { test as base, expect } from '@playwright/test';
 import { PokeApiClient } from '@api/PokeApiClient';
 
 /**
- * Extiende el test de playwright-bdd con fixtures propios.
- * Cada step definition importa `test`/`Given`/`When`/`Then` desde este archivo
- * en vez de desde 'playwright-bdd' directamente, para tener acceso a estas
- * fixtures ya inyectadas (evita repetir instanciación en cada step).
+ * Extiende el test nativo de Playwright con fixtures propios.
+ * Los tests importan `test`/`expect` desde este archivo en vez de
+ * '@playwright/test' directamente, para tener acceso a `pokeApi` ya inyectado.
  */
 export const test = base.extend<{ pokeApi: PokeApiClient }>({
   pokeApi: async ({ request }, use) => {
@@ -13,4 +12,4 @@ export const test = base.extend<{ pokeApi: PokeApiClient }>({
   },
 });
 
-export const { Given, When, Then } = test;
+export { expect };

@@ -1,27 +1,26 @@
 {
   "name": "qa-engineer-challenge",
   "version": "1.0.0",
-  "description": "Automation challenge - UI (IMDb) & API (PokeAPI) tests with Playwright + BDD",
+  "description": "Automation challenge - UI (IMDb) & API (PokeAPI) tests with Playwright",
   "scripts": {
-    "test:bdd:gen": "bddgen",
-    "test": "npm run test:bdd:gen && playwright test",
-    "test:ui": "npm run test:bdd:gen && playwright test --grep-invert @api",
-    "test:api": "npm run test:bdd:gen && playwright test --grep @api",
-    "test:chrome": "npm run test:bdd:gen && playwright test --project=chromium",
-    "test:firefox": "npm run test:bdd:gen && playwright test --project=firefox",
-    "test:headed": "npm run test:bdd:gen && playwright test --headed",
+    "test": "playwright test",
+    "test:ui": "playwright test --project=chromium --project=firefox",
+    "test:api": "playwright test --project=api",
+    "test:chrome": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:headed": "playwright test --headed",
     "report": "playwright show-report",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0",
+    "@playwright/test": "1.55.0",
     "@types/node": "^20.14.0",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
     "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
-    "playwright-bdd": "^7.1.0",
+    "playwright": "1.55.0",
     "typescript": "^5.5.0"
   }
 }

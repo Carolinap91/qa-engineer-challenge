@@ -106,7 +106,7 @@ prueba (no del test):
    CSS-only no se sincroniza con su estado visual → selector por `href`.
 8. **`data-testid="hero-rating-bar__aggregate-rating"` duplicado en el DOM** →
     acotado con `.first()`.
-8. **Botón "Rate" con `aria-label` dinámico** (incluye el título de la
+9. **Botón "Rate" con `aria-label` dinámico** (incluye el título de la
     película) → match por regex (`/^Rate\s/`) en vez de texto exacto.
 10. **Mismo bug de hydration que el punto 6**, ahora en el botón "Rate" del
     modal → mismo patrón de reintento.

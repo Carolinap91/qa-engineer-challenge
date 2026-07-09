@@ -3,9 +3,9 @@
 Suite de automatización para el challenge técnico: escenarios UI sobre IMDb.com
 y tests de API sobre PokeAPI (`/berry`, `/berry-flavor`).
 
-> Estado: cobertura parcial, entregada por límite de tiempo. Caso 1, Caso 2 (UI)
+> Estado: cobertura parcial, Caso 1, Caso 2 (UI)
 > y ambos endpoints de API completos y verdes. Casos 3, 4 y 5 quedaron fuera de
-> alcance — ver nota de scope más abajo.
+> alcance. 
 
 ## Stack técnico
 
@@ -63,10 +63,10 @@ Requiere Node.js 20+. Funciona igual en Windows, macOS, Linux y CI (sin dependen
 
 ## Cobertura de casos
 
-Caso 1 — Nicolas Cage: primera película con tag "Completed" en Upcoming, corrido en Chrome + Firefox. Completo.
-Caso 2 — Top Box Office: calificar con 5 estrellas el 2do ítem del ranking. Completo.
-API /berry: válido/inválido, por id y por nombre — 4 tests. Completo.
-API /berry-flavor: válido + caso encadenado spicy/potency — 2 tests. Completo.
+- Caso 1 — Nicolas Cage: primera película con tag "Completed" en Upcoming, corrido en Chrome + Firefox. Completo.
+- Caso 2 — Top Box Office: calificar con 5 estrellas el 2do ítem del ranking. Completo.
+- API /berry: válido/inválido, por id y por nombre — 4 tests. Completo.
+- API /berry-flavor: válido + caso encadenado spicy/potency — 2 tests. Completo.
 
 Total: 2/5 casos UI + 6/6 tests de API, todos verdes.
 

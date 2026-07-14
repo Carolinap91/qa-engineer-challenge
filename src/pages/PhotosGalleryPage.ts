@@ -3,13 +3,8 @@ import { BasePage } from './BasePage';
 
 /**
  * Page Object para la galería de fotos de un título (Photos / mediaindex).
- * Genérico a propósito (no específico de Breaking Bad): cualquier título de
- * IMDb expone esta misma galería, así que separar esta lógica de
- * Top250TvPage permite reusarla para otros casos futuros sin duplicar código.
- *
- * NOTA (borrador sin inspección en vivo): selectores de filtro por cast y de
- * grilla de fotos son hipótesis basadas en la estructura típica de IMDb, no
- * confirmadas contra el DOM real. Pendiente de ajustar con el primer trace.
+ * Genérico a propósito: cualquier título de IMDb expone esta misma
+ * galería, separada de Top250TvPage para poder reusarla.
  */
 export class PhotosGalleryPage extends BasePage {
   constructor(page: Page) {
@@ -17,19 +12,10 @@ export class PhotosGalleryPage extends BasePage {
   }
 
   /**
-   * Navega a la sección "Photos" del título actual y llega hasta el índice
-   * completo de fotos (con filtros), no al visor de una sola imagen.
-   *
-   * DECISIÓN (ambigüedad #15): "ir a la sección Photos" se interpretó como
-   * la sección <section data-testid="Photos"> del cuerpo de la página (no
-   * el botón "99+ Photos" del hero, que es un atajo, no "la sección").
-   *
-   * Confirmado contra el DOM real que esto requiere DOS clicks, no uno:
-   * 1. El heading "Photos" de esa sección abre el visor de una sola imagen
-   *    (mediaviewer), no la galería.
-   * 2. Desde el visor, el botón de grilla (data-testid="mv-gallery-button")
-   *    lleva al índice completo (/mediaindex/), que es donde vive el filtro
-   *    por cast member necesario para el resto del caso.
+   * Navega a la sección "Photos" (no el atajo "99+ Photos" del hero — ver
+   * ambigüedad #15 en el README) hasta el índice completo con filtros.
+   * Dos clicks: el heading abre un visor de una imagen (mediaviewer);
+   * desde ahí, el botón de grilla lleva al índice completo (mediaindex).
    */
   async goToPhotos(): Promise<void> {
     await this.page.locator('[data-testid="Photos"] a.ipc-title-link-wrapper').click();
@@ -37,14 +23,9 @@ export class PhotosGalleryPage extends BasePage {
   }
 
   /**
-   * Abre el panel de filtros del índice de fotos.
-   * Confirmado: <button data-testid="image-chip-dropdown-test-id"
-   * aria-label="Open filter prompt">.
-   *
-   * Reintenta hasta 3 veces vía clickWithRetry (BasePage) — mismo patrón
-   * que el toggle "Upcoming" del Caso 1 y el botón "Rate" del Caso 2: el
-   * primer click puede no tener efecto porque React todavía no conectó el
-   * listener del botón.
+   * Abre el panel de filtros del índice de fotos. Reintenta vía
+   * clickWithRetry (BasePage) por el mismo hydration lag que "Upcoming" y
+   * "Rate" en otros casos.
    */
   async openFilterPanel(): Promise<void> {
     const filterButton = this.page.locator('[data-testid="image-chip-dropdown-test-id"]');
@@ -58,42 +39,28 @@ export class PhotosGalleryPage extends BasePage {
   }
 
   /**
-   * Filtra la galería para mostrar solo fotos de un miembro del cast.
-   * Confirmado contra el DOM real:
-   * - El panel de filtro es un dialog real (data-testid="promptable",
-   *   role="dialog"), con secciones TYPE y PERSON.
-   * - No todas las personas están visibles por defecto en la sección
-   *   PERSON: si el nombre buscado no aparece de entrada, hay un toggle
-   *   "More people" que revela el resto de los chips.
-   * - Tras seleccionar el chip, el panel queda abierto y hay que cerrarlo
-   *   explícitamente (botón "Close Prompt") para volver a la grilla ya
-   *   filtrada — la selección del chip no lo cierra automáticamente.
+   * Filtra la galería por miembro del cast.
+   *
+   * La sección PERSON del panel solo muestra ~14 chips (los más
+   * frecuentes); el resto vive en un <select> nativo oculto ("More
+   * people", opacity: 0). Se prueba primero el chip visible; si no
+   * existe, se busca la <option> por texto y se selecciona por value.
+   *
+   * Tras seleccionar, el panel no se cierra solo — hay que cerrarlo con
+   * "Close Prompt" para volver a la grilla filtrada.
    */
   async filterByCastMember(name: string): Promise<void> {
     await this.openFilterPanel();
     const dialog = this.page.getByRole('dialog');
     await dialog.waitFor({ state: 'visible' });
 
-    // La sección PERSON del filtro solo muestra como chips a las ~14
-    // personas con más fotos. El resto vive en un <select> NATIVO oculto
-    // (opacity: 0, data-testid="select-dropdown-test-id") superpuesto por
-    // el label "More people" — no es un botón que "revela" más chips como
-    // parecía visualmente. Cada <option value="nmXXXXXXX"> tiene el nombre
-    // y el conteo, ej. "Danny Trejo (11)".
-    //
-    // Estrategia: probar primero el chip visible (nombres frecuentes);
-    // si no existe, resolver la opción en el <select> por texto y
-    // seleccionarla por value (más estable que por label exacto, porque
-    // el conteo entre paréntesis puede cambiar).
     const visibleChip = dialog.getByRole('button', { name, exact: false });
 
     if ((await visibleChip.count()) > 0) {
       await visibleChip.first().click();
     } else {
-      // data-testid="select-dropdown-test-id" se repite (hay un <select>
-      // por categoría: PERSON y OTHER) — strict mode violation si no se
-      // acota al contenedor de PERSON (data-testid=
-      // "image-names-filter-container-test-id").
+      // El testid del <select> se repite (uno por categoría: PERSON y
+      // OTHER) — acotado al contenedor de PERSON para evitar strict mode.
       const morePeopleSelect = dialog
         .locator('[data-testid="image-names-filter-container-test-id"]')
         .locator('[data-testid="select-dropdown-test-id"]');
@@ -109,31 +76,19 @@ export class PhotosGalleryPage extends BasePage {
   }
 
   /**
-   * Hace click en la N-ésima foto de la grilla (1-indexed, ej. 2 = "2da foto").
-   * Selección por POSICIÓN, mismo criterio que Top Box Office: el contenido
-   * de una galería filtrada es una lista ordenada, no algo identificable por
-   * nombre único.
-   *
-   * Confirmado contra el DOM real: cada miniatura es
-   * <a data-testid="mosaic-img-{fila}-{col}" href=".../mediaviewer/rm.../">,
-   * en el mismo orden en que aparecen visualmente en la grilla.
+   * Hace click en la N-ésima foto (1-indexed). Selección por posición: una
+   * galería filtrada es una lista ordenada, no algo con nombre único.
    */
   async clickNthPhoto(position: number): Promise<void> {
     const photos = this.page.locator('a[data-testid^="mosaic-img-"]');
 
-    // Bounds-checking para el caso border "posición fuera de rango". OJO: un
-    // `count()` inmediato es racy — justo después de cerrar el panel de
-    // filtro, la grilla puede no haber terminado de re-renderizarse, así que
-    // `count()` puede leer un número menor al real solo por timing (rompía
-    // el caso feliz de forma intermitente). Esperamos explícitamente a que
-    // al menos una foto aparezca antes de contar cuántas hay en total.
+    // count() inmediato es racy (la grilla puede no haber re-renderizado
+    // tras cerrar el filtro) — esperamos a que aparezca al menos una foto
+    // antes de contar cuántas hay en total.
     await photos
       .first()
       .waitFor({ state: 'visible', timeout: 10_000 })
-      .catch(() => {
-        // Si genuinamente no hay fotos, no hay nada que esperar — count()
-        // abajo dará 0 y el mensaje de error lo deja claro.
-      });
+      .catch(() => {});
 
     const count = await photos.count();
     if (position > count) {

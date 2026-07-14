@@ -13,29 +13,21 @@ export class SearchPage extends BasePage {
   }
 
   /**
-   * Escribe el nombre en el buscador y presiona Enter para ir a /find.
-   * Luego hace click en el primer resultado cuyo aria-label coincida
-   * exactamente con el nombre buscado (perfil de persona, no película).
+   * Busca el nombre y abre el primer resultado cuyo aria-label coincida
+   * exacto (perfil de persona, no película).
    *
-   * Bounds-checking para el caso border "actor inexistente": un `count()`
-   * inmediato es racy (la navegación a /find y el render de resultados son
-   * asíncronos, así que `count()` puede leer 0 solo porque todavía no
-   * cargó, no porque no haya match — eso rompía el caso feliz de forma
-   * intermitente). En vez de eso, esperamos explícitamente (con timeout
-   * acotado) a que el link aparezca, y solo ahí distinguimos "nunca
-   * apareció" (actor inexistente) de otros fallos.
+   * Espera explícitamente a que aparezca (no `count()` inmediato, que es
+   * racy justo después de navegar) para distinguir "actor inexistente" de
+   * un fallo real.
    */
   async searchAndOpenActor(name: string): Promise<void> {
     await this.searchInput.click();
     await this.searchInput.fill(name);
     await this.searchInput.press('Enter');
 
-    // En la página /find, el perfil del actor aparece como un <a> con
-    // aria-label igual al nombre exacto, dentro de ipc-lockup-overlay.
-    // Tomamos el primero que coincida (Exact matches section).
+    // El perfil aparece como <a class="ipc-lockup-overlay" aria-label="...">.
     const profileLink = this.page
       .locator('a.ipc-lockup-overlay')
-      .filter({ hasText: '' })
       .and(this.page.locator(`[aria-label="${name}"]`))
       .first();
 

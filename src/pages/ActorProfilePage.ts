@@ -43,7 +43,18 @@ export class ActorProfilePage extends BasePage {
    * Verifica aria-expanded antes de hacer click para no colapsar si ya está abierta.
    */
 async expandUpcomingCredits(): Promise<void> {
-    await this.upcomingToggle.waitFor({ state: 'visible' });
+    // Bounds-checking para el caso border "actor sin sección Upcoming".
+    // OJO: un `count()` inmediato es racy — justo después de navegar al
+    // perfil, la sección de créditos puede no haber renderizado todavía, así
+    // que `count()` puede leer 0 solo por timing y no porque el actor
+    // realmente no tenga Upcoming (esto rompía el caso feliz de forma
+    // intermitente). En vez de eso, esperamos explícitamente (timeout
+    // acotado) y solo ahí distinguimos "nunca apareció" de otros fallos.
+    try {
+      await this.upcomingToggle.waitFor({ state: 'visible', timeout: 10_000 });
+    } catch {
+      throw new Error('Este actor/actriz no tiene una sección "Upcoming" en sus créditos.');
+    }
 
     // Reintentamos el click hasta 3 veces: en IMDb (SPA React) el botón puede
     // estar visible en el DOM antes de que su listener de click esté

@@ -14,6 +14,11 @@ test.describe('PokeAPI - Berry flavor endpoint', () => {
     expect(body.berries.length).toBeGreaterThan(0);
   });
 
+  test('Consultar berry-flavor por nombre inválido', async ({ pokeApi }) => {
+    const response = await pokeApi.getBerryFlavor('not-a-real-flavor');
+    expect(response.status()).toBe(404);
+  });
+
   test('Encontrar la berry "spicy" con mayor potencia y validarla', async ({ pokeApi }) => {
     // 1. Obtener todas las berries con sabor "spicy"
     const flavorResponse = await pokeApi.getBerryFlavor('spicy');

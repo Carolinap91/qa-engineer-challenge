@@ -16,6 +16,14 @@ export class SearchPage extends BasePage {
    * Escribe el nombre en el buscador y presiona Enter para ir a /find.
    * Luego hace click en el primer resultado cuyo aria-label coincida
    * exactamente con el nombre buscado (perfil de persona, no película).
+   *
+   * Bounds-checking para el caso border "actor inexistente": un `count()`
+   * inmediato es racy (la navegación a /find y el render de resultados son
+   * asíncronos, así que `count()` puede leer 0 solo porque todavía no
+   * cargó, no porque no haya match — eso rompía el caso feliz de forma
+   * intermitente). En vez de eso, esperamos explícitamente (con timeout
+   * acotado) a que el link aparezca, y solo ahí distinguimos "nunca
+   * apareció" (actor inexistente) de otros fallos.
    */
   async searchAndOpenActor(name: string): Promise<void> {
     await this.searchInput.click();
@@ -30,6 +38,12 @@ export class SearchPage extends BasePage {
       .filter({ hasText: '' })
       .and(this.page.locator(`[aria-label="${name}"]`))
       .first();
+
+    try {
+      await profileLink.waitFor({ state: 'visible', timeout: 10_000 });
+    } catch {
+      throw new Error(`No se encontró un perfil de actor/actriz para "${name}".`);
+    }
 
     await profileLink.click();
   }

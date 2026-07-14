@@ -3,9 +3,9 @@
 Suite de automatización para el challenge técnico: escenarios UI sobre IMDb.com
 y tests de API sobre PokeAPI (`/berry`, `/berry-flavor`).
 
-> Estado: cobertura parcial, Caso 1, Caso 2 (UI)
-> y ambos endpoints de API completos y verdes. Casos 3, 4 y 5 quedaron fuera de
-> alcance. 
+> Estado: cobertura completa — los 5 casos UI y ambos endpoints de API,
+> completos y verdes en Chrome y Firefox, incluyendo casos negativos/border
+> agregados sobre cada caso.
 
 ## Stack técnico
 
@@ -27,6 +27,13 @@ y tests de API sobre PokeAPI (`/berry`, `/berry-flavor`).
 - **Sin credenciales de login en ningún test**, por decisión de seguridad. Donde
   IMDb requiere sesión (persistir un rating), se valida el comportamiento
   esperado para usuario anónimo en lugar de autenticar con una cuenta real.
+- **Job de `lint` + `typecheck` como gate en CI**, separado del job de tests y
+  corriendo primero (`needs: lint`). Antes existían los scripts (`npm run
+  lint`, `npm run typecheck`) pero no se ejecutaban en el pipeline — el CI
+  podía quedar verde con errores de tipo o de lint sin que nadie lo notara.
+  También faltaba el archivo de configuración de ESLint (`.eslintrc.json`)
+  en sí; el script `lint` fallaba si se corría. Este job además falla rápido
+  antes de instalar navegadores e ir al job de tests (más caro).
 
 ## Estructura del proyecto
 
@@ -63,12 +70,15 @@ Requiere Node.js 20+. Funciona igual en Windows, macOS, Linux y CI (sin dependen
 
 ## Cobertura de casos
 
-- Caso 1 — Nicolas Cage: primera película con tag "Completed" en Upcoming, corrido en Chrome + Firefox. Completo.
-- Caso 2 — Top Box Office: calificar con 5 estrellas el 2do ítem del ranking. Completo.
+- Caso 1 — Nicolas Cage: primera película con tag "Completed" en Upcoming, corrido en Chrome + Firefox. Completo. + 2 casos negativos/border: actor inexistente, actor sin sección "Upcoming".
+- Caso 2 — Top Box Office: calificar con 5 estrellas el 2do ítem del ranking. Completo. + 2 casos negativos/border: cerrar el modal sin calificar (Escape), abrir "Rate" dos veces seguidas sin duplicar el modal.
+- Caso 3 — Breaking Bad / Photos: filtrar por Danny Trejo y abrir la 2da foto, corrido en Chrome + Firefox. Completo. + 2 casos negativos/border: show inexistente en el Top 250, posición de foto fuera de rango.
+- Caso 4 — Born Today: celebridades nacidas ayer, click en el 3er resultado, corrido en Chrome + Firefox. Completo. + 2 casos negativos/border: fecha inválida (30 de febrero), posición de resultado fuera de rango.
+- Caso 5 — Born Today: personas que cumplen 40 años hoy, click condicional en el link de la descripción del 1er resultado, corrido en Chrome + Firefox. Completo. + 2 casos negativos/border: rango de fechas invertido, rango de fechas en el futuro (sin resultados).
 - API /berry: válido/inválido, por id y por nombre — 4 tests. Completo.
-- API /berry-flavor: válido + caso encadenado spicy/potency — 2 tests. Completo.
+- API /berry-flavor: válido + inválido (404) + caso encadenado spicy/potency — 3 tests. Completo.
 
-Total: 2/5 casos UI + 6/6 tests de API, todos verdes.
+Total: 15/15 tests UI (5 casos felices + 10 negativos/border) + 7/7 tests de API, todos verdes en Chrome y Firefox.
 
 
 ## Metodología de trabajo
@@ -120,9 +130,67 @@ prueba (no del test):
 14. **El heading "Sign in" matcheaba por substring** con un `<h4>` de marketing
     homónimo ("It's so much better when you sign in") → `getByRole('heading',
     { name: 'Sign in', exact: true })`.
+15. **"Ir a la sección Photos" era ambiguo** — IMDb tiene un botón "99+ Photos"
+    en el hero y una `<section data-testid="Photos">` más abajo en la página,
+    ambos terminan en la misma URL. Se interpretó literalmente: la sección,
+    no el atajo del hero. Además, esa sección abre primero un visor de una
+    sola imagen (mediaviewer) — hace falta un segundo click en el ícono de
+    grilla para llegar al índice completo con filtros (mediaindex).
+16. **Mismo patrón de hydration lenta que los puntos 4 y 10**, ahora en el
+    botón de filtro de fotos (`image-chip-dropdown-test-id`) → mismo
+    reintento verificando que el `dialog` se haya abierto.
+17. **"More people" no es un botón que revela más chips**: es un `<select>`
+    nativo oculto (`opacity: 0`) con las personas que no están entre los
+    ~14 chips más frecuentes visibles por defecto. Se resuelve buscando la
+    `<option>` por texto y seleccionándola por `value`, no por click.
+18. **`data-testid="select-dropdown-test-id"` duplicado** (un `<select>` por
+    categoría de filtro: PERSON y OTHER) → acotado al contenedor
+    `image-names-filter-container-test-id`, mismo patrón que el punto 8.
+19. **"Born Today" no tiene un preset "Celebrities born yesterday"**: la
+    página real (Advanced name search) solo permite tipear una fecha
+    MM-DD a mano en el filtro "Birthday". Se resolvió calculando la fecha
+    dinámicamente (`getMonthDay(-1)`, nunca hardcodeada) en vez de asumir
+    un texto de búsqueda literal.
+20. **El link "Born today" del menú no resolvía por `href`** (nunca
+    quedaba "attached" pese a existir en la inspección manual del DOM) →
+    `getByLabel('Go to Born today')`, confirmado con Playwright Inspector
+    (Pick locator), sí resuelve. Selector por atributo `href` no siempre
+    es más confiable que uno semántico.
+21. **El botón "See results" quedaba deshabilitado tras `fill()`** en el
+    campo de fecha: la validación que lo habilita depende de eventos de
+    teclado reales por carácter y de un blur final, no solo del valor
+    final del input → `pressSequentially()` + `press('Tab')` en vez de
+    `fill()`.
+22. **Bug real de la app:** una fecha inválida en el filtro "Birthday" (ej.
+    "02-30", 30 de febrero, que no existe en ningún calendario) no muestra
+    0 resultados como sería esperable — deja el botón "See results"
+    permanentemente deshabilitado (`aria-disabled="true"`), sin dar
+    feedback de por qué es inválida. Detectado con Trace Viewer: el primer
+    borrador del test asumía 0 resultados y colgaba 30s reintentando un
+    click sobre un botón que nunca se habilita. Se resolvió separando
+    `typeBirthday()` (solo tipea, sin intentar el submit) de
+    `searchByBirthday()`, y validando el estado `disabled` en vez de
+    forzar el click.
+23. **Race condition en los `count()` de bounds-checking**: al agregar
+    validaciones de "elemento no encontrado" (actor inexistente, show
+    inexistente, posición fuera de rango, etc.) con un `count()`
+    inmediato, el caso feliz se volvía intermitente — justo después de un
+    click/navegación la lista todavía no había renderizado, así que
+    `count()` leía 0 por timing y no por ausencia real, lanzando el error
+    de "no encontrado" sobre datos que sí existían. Se resolvió esperando
+    explícitamente (`waitFor` con timeout acotado) antes de contar, y solo
+    tratando el timeout como "no existe".
 
-## Próximos pasos:
+## Cierre
 
-- Implementar Casos 3, 4 y 5 reutilizando el patrón de selector por `href`
-  para navegación de menú, que cubren la mayoría de la fricción esperada.
+Los 5 casos UI se cubrieron con 3 Page Objects reutilizables entre sí
+(`AdvancedNameSearchPage` sirve para los Casos 4 y 5 sin duplicar código,
+`PhotosGalleryPage` está pensado para reusarse con cualquier título, no
+solo Breaking Bad). Se sumaron 10 casos negativos/border (2 por cada caso
+UI) y 1 caso negativo de API, con bounds-checking defensivo agregado a los
+Page Objects (errores descriptivos en vez de timeouts genéricos). 6 bugs
+reales de la aplicación bajo prueba quedaron documentados (puntos 5, 15,
+20, 21 y 22 de la lista de arriba — el punto 23 es un bug del propio
+framework de tests, no de la app), no solo ambigüedades de interpretación
+del enunciado.
 

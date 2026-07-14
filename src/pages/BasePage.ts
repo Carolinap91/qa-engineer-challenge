@@ -20,10 +20,21 @@ export class BasePage {
    * Selector por href (no getByRole) porque el drawer de IMDb no
    * sincroniza aria-hidden al abrirse, y getByRole() ignora elementos bajo
    * aria-hidden="true" aunque estén visualmente visibles.
+   *
+   * Interacción por TECLADO (focus + Enter), no click de mouse: el link
+   * recién abierto en el drawer intermitentemente queda "inestable" o
+   * tapado (mismo síntoma que el bug de las estrellas de rating del Caso 2
+   * y el link "Born today" del Caso 4) — un click de mouse depende de que
+   * el elemento esté estable y no obstruido, algo que el drawer no
+   * garantiza. focus() + Enter dispara un click nativo sin esas
+   * condiciones, evitando el problema de raíz en vez de reintentarlo.
    */
   protected async navigateViaMenuHref(hrefFragment: string): Promise<void> {
     await this.openMainMenu();
-    await this.page.locator(`a[href*="${hrefFragment}"]`).first().click();
+    const link = this.page.locator(`a[href*="${hrefFragment}"]`).first();
+    await link.waitFor({ state: 'attached' });
+    await link.focus();
+    await link.press('Enter');
   }
 
   /**

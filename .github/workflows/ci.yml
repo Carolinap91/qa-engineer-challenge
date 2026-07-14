@@ -36,6 +36,9 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     strategy:
+      # Sin esto, si un proyecto del matrix falla, GitHub cancela los demás
+      # antes de terminar — ocultando si chromium/firefox hubieran pasado.
+      fail-fast: false
       matrix:
         project: [chromium, firefox, api]
     steps:
@@ -59,7 +62,11 @@ jobs:
         run: npx playwright test --project=${{ matrix.project }}
         env:
           BASE_URL_IMDB: https://www.imdb.com
-          BASE_URL_POKEAPI: https://pokeapi.co/api/v2
+          # OJO: la barra final es obligatoria. Sin ella, al resolver rutas
+          # relativas (ej. "berry/25/") contra esta baseURL, la URL final
+          # pierde el segmento "/api/v2" — mismo bug documentado en el
+          # README (#5), reintroducido acá por esta variable.
+          BASE_URL_POKEAPI: https://pokeapi.co/api/v2/
 
       - name: Upload HTML report
         if: always()

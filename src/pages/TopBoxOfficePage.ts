@@ -10,17 +10,8 @@ export class TopBoxOfficePage extends BasePage {
     super(page);
   }
 
- /**
-   * Despliega el menú principal y navega a "Top Box Office".
-   * NOTA: usamos un selector por href en vez de getByRole('menuitem', ...)
-   * porque el drawer de IMDb (implementado con un checkbox CSS-only) no
-   * sincroniza correctamente aria-hidden al abrirse — getByRole() excluye
-   * elementos bajo aria-hidden="true" de su búsqueda, aunque estén
-   * visualmente visibles, causando que el locator nunca resuelva.
-   */
   async navigateToTopBoxOffice(): Promise<void> {
-    await this.openMainMenu();
-    await this.page.locator('a[href*="/chart/boxoffice/"]').first().click();
+    await this.navigateViaMenuHref('/chart/boxoffice/');
   }
 
   /**

@@ -16,6 +16,17 @@ export class BasePage {
   }
 
   /**
+   * Abre el menú y navega al link cuyo href contenga `hrefFragment`.
+   * Selector por href (no getByRole) porque el drawer de IMDb no
+   * sincroniza aria-hidden al abrirse, y getByRole() ignora elementos bajo
+   * aria-hidden="true" aunque estén visualmente visibles.
+   */
+  protected async navigateViaMenuHref(hrefFragment: string): Promise<void> {
+    await this.openMainMenu();
+    await this.page.locator(`a[href*="${hrefFragment}"]`).first().click();
+  }
+
+  /**
    * Hace click en `trigger` reintentando hasta `attempts` veces, dando por
    * bueno el click solo cuando `verify()` confirma que tuvo efecto real.
    *

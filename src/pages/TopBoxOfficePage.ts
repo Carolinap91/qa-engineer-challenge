@@ -52,25 +52,19 @@ export class TopBoxOfficePage extends BasePage {
    * (dinámico, incluye el nombre de la película) — por eso NO se puede usar
    * exact:true con "Rate"; usamos una regex que matchea el prefijo.
    *
-   * Reintenta hasta 3 veces (misma causa que el botón "Upcoming" del caso 1):
-   * el click puede no tener efecto si React todavía no conectó su listener.
+   * Reintenta hasta 3 veces vía clickWithRetry (BasePage) — misma causa que
+   * el botón "Upcoming" del Caso 1: el click puede no tener efecto si React
+   * todavía no conectó su listener.
    */
   async clickRateButton(): Promise<void> {
     const rateTrigger = this.page.getByRole('button', { name: /^Rate\s/ }).first();
     const dialog = this.page.getByRole('dialog');
 
-    let opened = false;
-    for (let attempt = 1; attempt <= 3 && !opened; attempt++) {
-      await rateTrigger.click();
-      try {
-        await dialog.waitFor({ state: 'visible', timeout: 5_000 });
-        opened = true;
-      } catch {
-        if (attempt === 3) {
-          throw new Error('No se pudo abrir el modal de rating tras 3 intentos');
-        }
-      }
-    }
+    await this.clickWithRetry(
+      rateTrigger,
+      () => dialog.waitFor({ state: 'visible', timeout: 5_000 }),
+      { failureMessage: 'No se pudo abrir el modal de rating tras 3 intentos' }
+    );
   }
 
 /**

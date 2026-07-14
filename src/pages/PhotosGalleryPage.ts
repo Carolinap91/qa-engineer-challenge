@@ -41,26 +41,20 @@ export class PhotosGalleryPage extends BasePage {
    * Confirmado: <button data-testid="image-chip-dropdown-test-id"
    * aria-label="Open filter prompt">.
    *
-   * Reintenta hasta 3 veces (mismo patrón que el toggle "Upcoming" del
-   * Caso 1 y el botón "Rate" del Caso 2): el primer click puede no tener
-   * efecto porque React todavía no conectó el listener del botón.
+   * Reintenta hasta 3 veces vía clickWithRetry (BasePage) — mismo patrón
+   * que el toggle "Upcoming" del Caso 1 y el botón "Rate" del Caso 2: el
+   * primer click puede no tener efecto porque React todavía no conectó el
+   * listener del botón.
    */
   async openFilterPanel(): Promise<void> {
     const filterButton = this.page.locator('[data-testid="image-chip-dropdown-test-id"]');
     const dialog = this.page.getByRole('dialog');
 
-    let opened = false;
-    for (let attempt = 1; attempt <= 3 && !opened; attempt++) {
-      await filterButton.click();
-      try {
-        await dialog.waitFor({ state: 'visible', timeout: 5_000 });
-        opened = true;
-      } catch {
-        if (attempt === 3) {
-          throw new Error('No se pudo abrir el panel de filtro tras 3 intentos');
-        }
-      }
-    }
+    await this.clickWithRetry(
+      filterButton,
+      () => dialog.waitFor({ state: 'visible', timeout: 5_000 }),
+      { failureMessage: 'No se pudo abrir el panel de filtro tras 3 intentos' }
+    );
   }
 
   /**

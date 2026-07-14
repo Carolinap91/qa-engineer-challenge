@@ -42,7 +42,7 @@ export class ActorProfilePage extends BasePage {
    * Despliega la pestaña "Upcoming" en la sección Credits del perfil del actor.
    * Verifica aria-expanded antes de hacer click para no colapsar si ya está abierta.
    */
-async expandUpcomingCredits(): Promise<void> {
+  async expandUpcomingCredits(): Promise<void> {
     // Bounds-checking para el caso border "actor sin sección Upcoming".
     // OJO: un `count()` inmediato es racy — justo después de navegar al
     // perfil, la sección de créditos puede no haber renderizado todavía, así
@@ -56,28 +56,17 @@ async expandUpcomingCredits(): Promise<void> {
       throw new Error('Este actor/actriz no tiene una sección "Upcoming" en sus créditos.');
     }
 
-    // Reintentamos el click hasta 3 veces: en IMDb (SPA React) el botón puede
-    // estar visible en el DOM antes de que su listener de click esté
-    // conectado (hydration), lo que hace que un click ocasionalmente no
-    // tenga efecto. Un solo intento es intermitente (flaky); reintentar
-    // hasta confirmar aria-expanded="true" lo vuelve determinístico.
     const isAlreadyExpanded = (await this.upcomingToggle.getAttribute('aria-expanded')) === 'true';
 
     if (!isAlreadyExpanded) {
-      let expanded = false;
-      for (let attempt = 1; attempt <= 3 && !expanded; attempt++) {
-        await this.upcomingToggle.click();
-        try {
-          await expect(this.upcomingToggle).toHaveAttribute('aria-expanded', 'true', {
-            timeout: 5_000,
-          });
-          expanded = true;
-        } catch {
-          if (attempt === 3) {
-            throw new Error('No se pudo expandir la sección "Upcoming" tras 3 intentos');
-          }
-        }
-      }
+      // Reintenta hasta confirmar aria-expanded="true" (ver clickWithRetry
+      // en BasePage: mismo patrón de hydration lenta que "Rate" en Top Box
+      // Office y el filtro de fotos en Breaking Bad).
+      await this.clickWithRetry(
+        this.upcomingToggle,
+        () => expect(this.upcomingToggle).toHaveAttribute('aria-expanded', 'true', { timeout: 5_000 }),
+        { failureMessage: 'No se pudo expandir la sección "Upcoming" tras 3 intentos' }
+      );
     }
 
     const upcomingItems = await this.getUpcomingListItems();

@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+# Si llega un push/PR nuevo mientras un run anterior de la misma rama sigue
+# corriendo, cancela el anterior en vez de dejar los dos corriendo en
+# paralelo — evita gastar minutos de CI en un run que ya quedó obsoleto.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -42,7 +49,11 @@ jobs:
       - run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps ${{ matrix.project != 'api' && matrix.project || 'chromium' }}
+        # El proyecto "api" no abre ningún browser (usa la fixture `request`
+        # de Playwright), así que instalar Chromium para ese caso era
+        # tiempo de CI desperdiciado. Se salta el step directamente.
+        if: matrix.project != 'api'
+        run: npx playwright install --with-deps ${{ matrix.project }}
 
       - name: Run tests
         run: npx playwright test --project=${{ matrix.project }}

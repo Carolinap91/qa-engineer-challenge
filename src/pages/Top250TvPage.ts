@@ -24,8 +24,7 @@ export class Top250TvPage extends BasePage {
    * si el show existe.
    */
   async clickShowByTitle(title: string): Promise<void> {
-    const items = this.page.locator('[data-testid="chart-layout-main-column"] .cli-parent');
-    const matches = items.filter({
+    const matches = this.getChartItems().filter({
       has: this.page.locator('a.ipc-title-link-wrapper', { hasText: title }),
     });
 

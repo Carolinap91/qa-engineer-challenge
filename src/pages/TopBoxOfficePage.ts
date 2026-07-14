@@ -15,20 +15,17 @@ export class TopBoxOfficePage extends BasePage {
   }
 
   /**
-   * Hace click en el 2do ítem de la lista de Top Box Office.
-   * Selección por POSICIÓN (no por título): el ranking cambia cada semana,
-   * así que usar el nombre de la película haría el test frágil.
+   * Hace click en el 2do ítem de la lista. Selección por POSICIÓN, no por
+   * título: el ranking cambia cada semana.
    */
   async clickSecondListItem(): Promise<void> {
-    const items = this.page.locator('[data-testid="chart-layout-main-column"] .cli-parent');
-    await items.nth(1).locator('a.ipc-title-link-wrapper').click();
+    await this.getChartItems().nth(1).locator('a.ipc-title-link-wrapper').click();
   }
 
- /**
-   * Hace click en el área "IMDb Rating" del hero de la página de detalle,
-   * que navega a /title/{id}/ratings/. Usamos .first() porque IMDb duplica
-   * este bloque en el DOM (probablemente una variante responsive oculta),
-   * causando "strict mode violation" si no se especifica cuál tomar.
+  /**
+   * Hace click en "IMDb Rating" del hero, navega a /title/{id}/ratings/.
+   * `.first()` porque IMDb duplica este bloque en el DOM (variante
+   * responsive oculta) — strict mode violation sin acotar.
    */
   async clickImdbRating(): Promise<void> {
     await this.page
@@ -37,15 +34,11 @@ export class TopBoxOfficePage extends BasePage {
       .click();
   }
 
-   /**
-   * Hace click en el botón "Rate" (en la página de Ratings) que abre el
-   * modal de calificación. Su aria-label real es "Rate {título película}"
-   * (dinámico, incluye el nombre de la película) — por eso NO se puede usar
-   * exact:true con "Rate"; usamos una regex que matchea el prefijo.
-   *
-   * Reintenta hasta 3 veces vía clickWithRetry (BasePage) — misma causa que
-   * el botón "Upcoming" del Caso 1: el click puede no tener efecto si React
-   * todavía no conectó su listener.
+  /**
+   * Abre el modal de rating. El aria-label real es "Rate {título}"
+   * (dinámico), por eso se matchea por regex de prefijo en vez de texto
+   * exacto. Reintenta vía clickWithRetry (BasePage) por el mismo
+   * hydration lag que "Upcoming" en el Caso 1.
    */
   async clickRateButton(): Promise<void> {
     const rateTrigger = this.page.getByRole('button', { name: /^Rate\s/ }).first();
@@ -58,20 +51,13 @@ export class TopBoxOfficePage extends BasePage {
     );
   }
 
-/**
-   * Dentro del modal, selecciona una calificación de 1 a 10 estrellas
-   * y confirma con el botón "Rate" del modal.
+  /**
+   * Selecciona una calificación (1-10 estrellas) y confirma.
    *
-   * Usamos interacción por TECLADO (focus + Enter) en vez de click de mouse:
-   * el widget de estrellas tiene una capa invisible (ipc-starbar__touch) que
-   * intercepta cualquier click físico de mouse. Enfocar el botón real y
-   * presionar Enter dispara un click nativo del navegador sin depender de
-   * coordenadas de mouse, evitando el problema de raíz.
-   *
-   * El botón de confirmación se busca por rol + texto "Rate" (exacto),
-   * acotado al dialog: "ipc-rating-prompt__rate-button" es una CLASE CSS,
-   * no un data-testid (error de lectura inicial del DOM), por eso el
-   * selector anterior nunca encontraba el botón.
+   * Interacción por TECLADO (focus + Enter), no click de mouse: una capa
+   * invisible (ipc-starbar__touch) intercepta los clicks físicos sobre las
+   * estrellas. El botón de confirmación es una clase CSS
+   * (ipc-rating-prompt__rate-button), no un data-testid.
    */
   async rateWithStars(stars: number): Promise<void> {
     const dialog = this.page.getByRole('dialog');
@@ -81,5 +67,4 @@ export class TopBoxOfficePage extends BasePage {
 
     await dialog.getByRole('button', { name: 'Rate', exact: true }).click();
   }
-
 }

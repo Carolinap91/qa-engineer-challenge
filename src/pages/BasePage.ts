@@ -27,6 +27,14 @@ export class BasePage {
   }
 
   /**
+   * Items de un ranking en una página /chart/ (Top Box Office, Top 250 TV
+   * Shows) — ambas comparten el mismo componente de lista.
+   */
+  protected getChartItems(): Locator {
+    return this.page.locator('[data-testid="chart-layout-main-column"] .cli-parent');
+  }
+
+  /**
    * Hace click en `trigger` reintentando hasta `attempts` veces, dando por
    * bueno el click solo cuando `verify()` confirma que tuvo efecto real.
    *
